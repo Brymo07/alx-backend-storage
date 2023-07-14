@@ -1,17 +1,28 @@
--- creates a stored procedure ComputeAverageWeightedScoreForUser that computes
--- and store the average weighted score for a student.
--- TODO: implement weighted average based on https://www.wikihow.com/Calculate-Weighted-Average
-
-DELIMITER //
-CREATE PROCEDURE ComputeAverageScoreForUser(
-	IN user_id int
+-- Create the stored procedure
+CREATE PROCEDURE ComputeAverageWeightedScoreForUser
+(
+    IN user_id INT
 )
 BEGIN
-   UPDATE users
-   SET overall_score = (SELECT AVG(score)
-    FROM corrections
-	WHERE corrections.user_id=user_id
-	GROUP BY corrections.user_id )
-    WHERE id=user_id;
-END //
-DELIMITER;
+    -- Declare variables
+    DECLARE total_score FLOAT;
+    DECLARE total_weight FLOAT;
+    DECLARE average_score FLOAT;
+
+    -- Calculate the weighted average score
+    SELECT SUM(score * weight) INTO total_score, SUM(weight) INTO total_weight
+    FROM scores
+    WHERE user_id = user_id;
+
+    -- Compute the average weighted score
+    IF total_weight > 0 THEN
+        SET average_score = total_score / total_weight;
+    ELSE
+        SET average_score = 0;
+    END IF;
+
+    -- Store the average weighted score for the user
+    UPDATE users
+    SET average_weighted_score = average_score
+    WHERE id = user_id;
+END;
