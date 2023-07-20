@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+"""
+create a web cach
+"""
 import requests
 import redis
 from functools import wraps
