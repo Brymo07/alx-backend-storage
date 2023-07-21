@@ -14,7 +14,6 @@ an expiration time of 10 seconds.
 Tip: Use http://slowwly.robertomurray.co.uk to simulate
 a slow response and test your caching."""
 
-
 import redis
 import requests
 from functools import wraps
@@ -27,19 +26,22 @@ def url_access_count(method):
     @wraps(method)
     def wrapper(url):
         """wrapper function"""
-        key = "cached:" + url
-        cached_value = r.get(key)
-        if cached_value:
-            return cached_value.decode("utf-8")
+        if url == "http://google.com":
+            key = "cached:" + url
+            cached_value = r.get(key)
+            if cached_value:
+                return cached_value.decode("utf-8")
+            else:
+                # Get new content and update cache
+                key_count = "count:" + url
+                html_content = method(url)
+                r.incr(key_count)
+                r.set(key, html_content, ex=10)
+                r.expire(key, 10)
+                return html_content
+        else:
+            return method(url)
 
-            # Get new content and update cache
-        key_count = "count:" + url
-        html_content = method(url)
-
-        r.incr(key_count)
-        r.set(key, html_content, ex=10)
-        r.expire(key, 10)
-        return html_content
     return wrapper
 
 
@@ -52,3 +54,5 @@ def get_page(url: str) -> str:
 
 if __name__ == "__main__":
     get_page('http://slowwly.robertomurray.co.uk')
+    get_page('http://google.com')
+
