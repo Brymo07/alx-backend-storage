@@ -1,55 +1,54 @@
 #!/usr/bin/env python3
-"""
-create a web cach
-"""
-import requests
+"""In this tasks, we will implement a get_page function
+(prototype: def get_page(url: str) -> str:). The core of
+the function is very simple. It uses the requests module
+to obtain the HTML content of a particular URL and returns it.
+
+Start in a new file named web.py and do not reuse the code
+written in exercise.py.
+
+Inside get_page track how many times a particular URL was
+accessed in the key "count:{url}" and cache the result with
+an expiration time of 10 seconds.
+
+Tip: Use http://slowwly.robertomurray.co.uk to simulate
+a slow response and test your caching."""
+
+
 import redis
+import requests
 from functools import wraps
 
-# Connect to the Redis server
 r = redis.Redis()
 
+
 def url_access_count(method):
-    """Decorator for get_page function"""
+    """decorator for get_page function"""
     @wraps(method)
     def wrapper(url):
-        """Wrapper function"""
-        access_count_key = f"count:{url}"
-        access_count = r.get(access_count_key)
-        if not access_count:
-            access_count = 0
-        else:
-            access_count = int(access_count.decode('utf-8'))
+        """wrapper function"""
+        key = "cached:" + url
+        cached_value = r.get(key)
+        if cached_value:
+            return cached_value.decode("utf-8")
 
-        # Increment the access count and store it in Redis
-        access_count += 1
-        r.set(access_count_key, access_count)
-
-        # Check if the URL is already cached in Redis
-        cached_key = f"cached:{url}"
-        html_content = r.get(cached_key)
-        if html_content:
-            return html_content.decode('utf-8')
-
-        # Get new content and update cache
+            # Get new content and update cache
+        key_count = "count:" + url
         html_content = method(url)
 
-        r.setex(cached_key, 10, html_content)
+        r.incr(key_count)
+        r.set(key, html_content, ex=10)
+        r.expire(key, 10)
         return html_content
-
     return wrapper
+
 
 @url_access_count
 def get_page(url: str) -> str:
-    """Obtain the HTML content of a particular URL"""
-    response = requests.get(url)
-    if response.status_code == 200:
-        return response.text
-    else:
-        return ""
+    """obtain the HTML content of a particular"""
+    results = requests.get(url)
+    return results.text
 
-# Example usage
+
 if __name__ == "__main__":
-    url = "http://slowwly.robertomurray.co.uk"
-    get_page(url)
-
+    get_page('http://slowwly.robertomurray.co.uk')
