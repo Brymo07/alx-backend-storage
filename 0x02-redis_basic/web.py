@@ -23,7 +23,23 @@ r = redis.Redis()
 
 # Define a decorator function for caching
 def cache(func):
-    def wrapper(url):
+    """A decorator function that caches the result of another function.
+
+    Args:
+        func (function): The function to be cached.
+
+    Returns:
+        function: A wrapper function that checks the cache before calling the original function.
+    """
+    def wrapper(url: str) -> str:
+        """A wrapper function that checks the cache before calling the original function.
+
+        Args:
+            url (str): The URL to be fetched.
+
+        Returns:
+            str: The HTML content of the URL.
+        """
         # Check if the url is already cached
         cached = r.get(url)
         if cached:
@@ -44,10 +60,19 @@ def cache(func):
 
 # Define a function to get the HTML content of a URL using requests
 @cache # Apply the cache decorator
-def get_page(url):
+def get_page(url: str) -> str:
+    """A function to get the HTML content of a URL using requests.
+
+    Args:
+        url (str): The URL to be fetched.
+
+    Returns:
+        str: The HTML content of the URL.
+    """
     response = requests.get(url)
     return response.text
 
+# Test the function with a slow URL
+url = "http://slowwly.robertomurray.co.uk/delay/3000/url/http://www.google.com"
+get_page(url)
 
-if __name__ == "__main__":
-    get_page(url)
