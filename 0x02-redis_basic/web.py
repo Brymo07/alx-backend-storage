@@ -15,64 +15,40 @@ Tip: Use http://slowwly.robertomurray.co.uk to simulate
 a slow response and test your caching."""
 
 
-import requests
 import redis
+import requests
+from functools import wraps
 
-# Create a redis client
 r = redis.Redis()
 
-# Define a decorator function for caching
-def cache(func):
-    """A decorator function that caches the result of another function.
 
-    Args:
-        func (function): The function to be cached.
+def url_access_count(method):
+    """decorator for get_page function"""
+    @wraps(method)
+    def wrapper(url):
+        """wrapper function"""
+        key = "cached:" + url
+        cached_value = r.get(key)
+        if cached_value:
+            return cached_value.decode("utf-8")
 
-    Returns:
-        function: A wrapper function that checks the cache before calling the original function.
-    """
-    def wrapper(url: str) -> str:
-        """A wrapper function that checks the cache before calling the original function.
+            # Get new content and update cache
+        key_count = "count:" + url
+        html_content = method(url)
 
-        Args:
-            url (str): The URL to be fetched.
-
-        Returns:
-            str: The HTML content of the URL.
-        """
-        # Check if the url is already cached
-        cached = r.get(url)
-        if cached:
-            # Increment the count for the url
-            r.incr(f"count:{url}")
-            # Return the cached content
-            return cached.decode()
-        else:
-            # Call the original function
-            content = func(url)
-            # Cache the content with an expiration time of 10 seconds
-            r.setex(url, 10, content)
-            # Set the count for the url to 1
-            r.set(f"count:{url}", 1)
-            # Return the content
-            return content
+        r.incr(key_count)
+        r.set(key, html_content, ex=10)
+        r.expire(key, 10)
+        return html_content
     return wrapper
 
-# Define a function to get the HTML content of a URL using requests
-@cache # Apply the cache decorator
+
+@url_access_count
 def get_page(url: str) -> str:
-    """A function to get the HTML content of a URL using requests.
+    """obtain the HTML content of a particular"""
+    results = requests.get(url)
+    return results.text
 
-    Args:
-        url (str): The URL to be fetched.
 
-    Returns:
-        str: The HTML content of the URL.
-    """
-    response = requests.get(url)
-    return response.text
-
-# Test the function with a slow URL
-url = "http://slowwly.robertomurray.co.uk/delay/3000/url/http://www.google.com"
-get_page(url)
-
+if __name__ == "__main__":
+    get_page('http://slowwly.robertomurray.co.uk')
